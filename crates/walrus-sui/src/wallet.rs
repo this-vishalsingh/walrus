@@ -6,7 +6,6 @@
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use anyhow::Result;
