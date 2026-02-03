@@ -49,6 +49,7 @@ use walrus_core::{
 use walrus_utils::backoff::ExponentialBackoffConfig;
 
 use crate::{
+    balance::BalanceError,
     contracts::{self, MoveConversionError},
     system_setup::{self, compile_package},
     types::{
@@ -208,6 +209,9 @@ pub enum SuiClientError {
     /// A gRPC-related error has occurred.
     #[error("gRPC error: {0}")]
     GrpcError(#[from] tonic::Status),
+    /// A balance retrieval error has occurred.
+    #[error(transparent)]
+    BalanceCalculationError(#[from] BalanceError),
 }
 
 impl From<sui_types::error::SuiError> for SuiClientError {

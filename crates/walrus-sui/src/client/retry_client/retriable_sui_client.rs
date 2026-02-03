@@ -657,7 +657,11 @@ impl RetriableSuiClient {
         coin_type: Option<String>,
     ) -> SuiClientResult<Balance> {
         if self.grpc_migration_level >= GRPC_MIGRATION_LEVEL_GET_BALANCE {
-            self.get_balance_with_grpc(owner, coin_type).await
+            self.get_balance_with_grpc(
+                owner,
+                coin_type.unwrap_or_else(|| "0x2::sui::SUI".to_string()),
+            )
+            .await
         } else {
             self.get_balance_with_json_rpc(owner, coin_type).await
         }
@@ -667,23 +671,13 @@ impl RetriableSuiClient {
     async fn get_balance_with_grpc(
         &self,
         owner: SuiAddress,
-        coin_type: Option<String>,
+        coin_type: &str,
     ) -> SuiClientResult<Balance> {
-        self.failover_sui_client
-            .with_failover(
-                async |client, method| {
-                    Ok(retry_rpc_errors(
-                        self.get_strategy(),
-                        || async { client.get_balance(owner, coin_type.clone()).await },
-                        self.metrics.clone(),
-                        method,
-                    )
-                    .await?)
-                },
-                None,
-                "get_balance",
-            )
+        let coins = self
+            .select_all_coins(owner, Some(coin_type.to_string()))
             .await
+            .context("selecting all coins for balance")?;
+        Ok(Balance::from_coins(coin_type, coins))
     }
 
     #[tracing::instrument(level = Level::TRACE, skip_all)]

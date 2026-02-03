@@ -175,10 +175,10 @@ impl WalrusPtbBuilder {
     ///
     /// Returns a [`SuiClientError::NoCompatibleWalCoins`] if no WAL coins with sufficient balance
     /// can be found.
-    pub async fn fill_wal_balance(&mut self, min_balance: u64) -> SuiClientResult<bool> {
+    pub async fn fill_wal_balance(&mut self, min_balance: u64) -> SuiClientResult<()> {
         // If we already have a wal_coin_arg and sufficient balance, we're done
         if min_balance <= self.tx_wal_balance && self.wal_coin_arg.is_some() {
-            return Ok(false);
+            return Ok(());
         }
 
         let additional_balance = min_balance - self.tx_wal_balance;
@@ -220,7 +220,7 @@ impl WalrusPtbBuilder {
                 .command(Command::MergeCoins(main_coin, coin_args));
         }
         self.tx_wal_balance += added_balance;
-        Ok(true)
+        Ok(())
     }
 
     fn reduce_wal_balance(&mut self, amount: u64) -> SuiClientResult<()> {
@@ -1813,4 +1813,4 @@ pub async fn build_transaction_data_with_min_gas_balance(
         gas_budget,
         gas_price,
     ))
-
+}
