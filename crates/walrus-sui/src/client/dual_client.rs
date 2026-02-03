@@ -17,6 +17,7 @@ use sui_rpc::{
         BatchGetObjectsRequest,
         BatchGetObjectsResponse,
         Bcs,
+        GetBalanceRequest,
         GetObjectRequest,
         ListOwnedObjectsRequest,
         ListOwnedObjectsResponse,
@@ -34,7 +35,7 @@ use sui_types::{
 use tonic::service::interceptor::InterceptedService;
 use walrus_core::ensure;
 
-use crate::{client::SuiClientError, coin::Coin, contracts::TypeOriginMap};
+use crate::{balance::Balance, client::SuiClientError, coin::Coin, contracts::TypeOriginMap};
 
 /// The maximum number of objects to request in a single "batch" gRPC call.
 pub const MAX_GET_OBJECTS_BATCH_SIZE: usize = 100;
@@ -349,6 +350,23 @@ impl DualClient {
             );
         }
         Ok(type_origins)
+    }
+
+    pub(crate) async fn get_balance(
+        &self,
+        owner: SuiAddress,
+        coin_type: String,
+    ) -> Result<Balance, SuiClientError> {
+        let mut grpc_client = self.grpc_client.clone();
+        let state_client = grpc_client.state_client();
+        let get_balance_request = GetBalanceRequest::default()
+            .with_owner(owner.to_string())
+            .with_coin_type(coin_type);
+        let response = state_client
+            .get_balance(get_balance_request)
+            .await
+            .context("grpc request error")?;
+        Ok(Balance::from(response.into_inner()))
     }
 
     pub(crate) async fn fetch_batch_of_coins(

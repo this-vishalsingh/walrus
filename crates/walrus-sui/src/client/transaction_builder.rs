@@ -51,7 +51,7 @@ use super::{
     UpgradeType,
 };
 use crate::{
-    client::retry_client::retriable_sui_client::GasBudgetAndPrice,
+    client::retry_client::retriable_sui_client::{GasBudgetAndPrice, MAX_GAS_PAYMENT_OBJECTS},
     contracts::{self, FunctionTag},
     types::{
         NetworkAddress,
@@ -169,14 +169,16 @@ impl WalrusPtbBuilder {
     /// balance (that has already been added to the PTB and hasn't been consumed yet) is larger than
     /// `min_balance`.
     ///
+    /// # Returns a boolean indicating whether any coins were added.
+    ///
     /// # Errors
     ///
     /// Returns a [`SuiClientError::NoCompatibleWalCoins`] if no WAL coins with sufficient balance
     /// can be found.
-    pub async fn fill_wal_balance(&mut self, min_balance: u64) -> SuiClientResult<()> {
+    pub async fn fill_wal_balance(&mut self, min_balance: u64) -> SuiClientResult<bool> {
         // If we already have a wal_coin_arg and sufficient balance, we're done
         if min_balance <= self.tx_wal_balance && self.wal_coin_arg.is_some() {
-            return Ok(());
+            return Ok(false);
         }
 
         let additional_balance = min_balance - self.tx_wal_balance;
@@ -189,6 +191,7 @@ impl WalrusPtbBuilder {
                 self.used_wal_coins.iter().cloned().collect(),
             )
             .await?;
+
         let mut added_balance = 0;
         let main_coin = if let Some(coin_arg) = self.wal_coin_arg {
             coin_arg
@@ -217,7 +220,7 @@ impl WalrusPtbBuilder {
                 .command(Command::MergeCoins(main_coin, coin_args));
         }
         self.tx_wal_balance += added_balance;
-        Ok(())
+        Ok(true)
     }
 
     fn reduce_wal_balance(&mut self, amount: u64) -> SuiClientResult<()> {
@@ -1810,4 +1813,4 @@ pub async fn build_transaction_data_with_min_gas_balance(
         gas_budget,
         gas_price,
     ))
-}
+

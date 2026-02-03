@@ -2435,18 +2435,16 @@ impl SuiContractClientInner {
             .get_balance(address, Some(self.read_client().wal_coin_type().to_owned()))
             .await?;
 
-        if wal_balance.coin_object_count > 1 {
-            tx_builder
-                .fill_wal_balance(
-                    wal_balance
-                        .total_balance
-                        .try_into()
-                        .expect("this is always smaller than u64::MAX"),
-                )
-                .await?;
-        }
+        let added_wal = tx_builder
+            .fill_wal_balance(
+                wal_balance
+                    .total_balance
+                    .try_into()
+                    .expect("this is always smaller than u64::MAX"),
+            )
+            .await?;
 
-        if sui_balance.coin_object_count > 1 || wal_balance.coin_object_count > 1 {
+        if sui_balance.coin_object_count > 1 || added_wal {
             self.sign_and_send_transaction(
                 tx_builder
                     .transfer_outputs_and_build_transaction_data(

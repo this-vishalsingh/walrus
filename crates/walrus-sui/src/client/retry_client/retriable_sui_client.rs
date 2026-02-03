@@ -28,7 +28,6 @@ use sui_rpc::proto::sui::rpc::v2::Bcs;
 use sui_sdk::{
     error::Error as SuiSdkError,
     rpc_types::{
-        Balance,
         DryRunTransactionBlockResponse,
         ObjectsPage,
         SuiCommittee,
@@ -74,6 +73,7 @@ use super::{
     retry_rpc_errors,
 };
 use crate::{
+    balance::Balance,
     client::{
         SuiClientMetricSet,
         dual_client::{BcsDatapack, CoinBatch, DualClient},
@@ -208,6 +208,7 @@ const GRPC_MIGRATION_LEVEL_LEGACY_U32: u32 = 0;
 const GRPC_MIGRATION_LEVEL_GET_OBJECT: GrpcMigrationLevel = GrpcMigrationLevel(1);
 const GRPC_MIGRATION_LEVEL_BATCH_OBJECTS: GrpcMigrationLevel = GrpcMigrationLevel(2);
 const GRPC_MIGRATION_LEVEL_SELECT_COINS: GrpcMigrationLevel = GrpcMigrationLevel(3);
+const GRPC_MIGRATION_LEVEL_GET_BALANCE: GrpcMigrationLevel = GrpcMigrationLevel(4);
 
 impl Default for GrpcMigrationLevel {
     fn default() -> Self {
@@ -650,10 +651,43 @@ impl RetriableSuiClient {
     }
 
     /// Returns the balance for the given coin type owned by address.
-    ///
-    /// Calls [`sui_sdk::apis::CoinReadApi::get_balance`] internally.
-    #[tracing::instrument(level = Level::TRACE, skip_all)]
     pub async fn get_balance(
+        &self,
+        owner: SuiAddress,
+        coin_type: Option<String>,
+    ) -> SuiClientResult<Balance> {
+        if self.grpc_migration_level >= GRPC_MIGRATION_LEVEL_GET_BALANCE {
+            self.get_balance_with_grpc(owner, coin_type).await
+        } else {
+            self.get_balance_with_json_rpc(owner, coin_type).await
+        }
+    }
+
+    #[tracing::instrument(level = Level::TRACE, skip_all)]
+    async fn get_balance_with_grpc(
+        &self,
+        owner: SuiAddress,
+        coin_type: Option<String>,
+    ) -> SuiClientResult<Balance> {
+        self.failover_sui_client
+            .with_failover(
+                async |client, method| {
+                    Ok(retry_rpc_errors(
+                        self.get_strategy(),
+                        || async { client.get_balance(owner, coin_type.clone()).await },
+                        self.metrics.clone(),
+                        method,
+                    )
+                    .await?)
+                },
+                None,
+                "get_balance",
+            )
+            .await
+    }
+
+    #[tracing::instrument(level = Level::TRACE, skip_all)]
+    async fn get_balance_with_json_rpc(
         &self,
         owner: SuiAddress,
         coin_type: Option<String>,
@@ -669,6 +703,7 @@ impl RetriableSuiClient {
                                 .coin_read_api()
                                 .get_balance(owner, coin_type.clone())
                                 .await
+                                .map(Balance::from)
                         },
                         self.metrics.clone(),
                         method,
