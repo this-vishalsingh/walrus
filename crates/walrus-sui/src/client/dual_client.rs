@@ -17,7 +17,6 @@ use sui_rpc::{
         BatchGetObjectsRequest,
         BatchGetObjectsResponse,
         Bcs,
-        GetBalanceRequest,
         GetObjectRequest,
         ListOwnedObjectsRequest,
         ListOwnedObjectsResponse,
@@ -35,7 +34,7 @@ use sui_types::{
 use tonic::service::interceptor::InterceptedService;
 use walrus_core::ensure;
 
-use crate::{balance::Balance, client::SuiClientError, coin::Coin, contracts::TypeOriginMap};
+use crate::{client::SuiClientError, coin::Coin, contracts::TypeOriginMap};
 
 /// The maximum number of objects to request in a single "batch" gRPC call.
 pub const MAX_GET_OBJECTS_BATCH_SIZE: usize = 100;

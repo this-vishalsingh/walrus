@@ -659,7 +659,7 @@ impl RetriableSuiClient {
         if self.grpc_migration_level >= GRPC_MIGRATION_LEVEL_GET_BALANCE {
             self.get_balance_with_grpc(
                 owner,
-                coin_type.unwrap_or_else(|| "0x2::sui::SUI".to_string()),
+                coin_type.as_deref().unwrap_or_else(|| "0x2::sui::SUI"),
             )
             .await
         } else {
@@ -677,7 +677,7 @@ impl RetriableSuiClient {
             .select_all_coins(owner, Some(coin_type.to_string()))
             .await
             .context("selecting all coins for balance")?;
-        Ok(Balance::from_coins(coin_type, coins))
+        Ok(Balance::try_from_coins(coin_type, coins).context("get_balance_with_grpc")?)
     }
 
     #[tracing::instrument(level = Level::TRACE, skip_all)]
@@ -697,7 +697,7 @@ impl RetriableSuiClient {
                                 .coin_read_api()
                                 .get_balance(owner, coin_type.clone())
                                 .await
-                                .map(Balance::from)
+                                .and_then(|balance| Ok(Balance::try_from(balance)?))
                         },
                         self.metrics.clone(),
                         method,

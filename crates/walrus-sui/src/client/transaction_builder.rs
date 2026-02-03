@@ -51,7 +51,7 @@ use super::{
     UpgradeType,
 };
 use crate::{
-    client::retry_client::retriable_sui_client::{GasBudgetAndPrice, MAX_GAS_PAYMENT_OBJECTS},
+    client::retry_client::retriable_sui_client::GasBudgetAndPrice,
     contracts::{self, FunctionTag},
     types::{
         NetworkAddress,

@@ -211,7 +211,7 @@ pub enum SuiClientError {
     GrpcError(#[from] tonic::Status),
     /// A balance retrieval error has occurred.
     #[error(transparent)]
-    BalanceCalculationError(#[from] BalanceError),
+    BalanceRetrievalError(#[from] BalanceError),
 }
 
 impl From<sui_types::error::SuiError> for SuiClientError {
