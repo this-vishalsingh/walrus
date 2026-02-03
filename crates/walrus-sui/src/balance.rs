@@ -8,21 +8,20 @@ use move_core_types::language_storage::StructTag;
 
 use crate::coin::Coin;
 
+/// An error type for balance retrieval errors.
 #[derive(Debug, thiserror::Error)]
-#[error("error processing balance information: {0}")]
-pub struct BalanceError(anyhow::Error);
+#[error("error retrieving balance information: {0}")]
+pub struct BalanceRetrievalError(anyhow::Error);
 
-impl From<anyhow::Error> for BalanceError {
+impl From<anyhow::Error> for BalanceRetrievalError {
     fn from(err: anyhow::Error) -> Self {
-        BalanceError(err)
+        BalanceRetrievalError(err)
     }
 }
 
 /// A struct representing the balance of a specific coin type.
 #[derive(Debug, Clone)]
 pub struct Balance {
-    /// The coin type.
-    coin_type: StructTag,
     /// The total balance across all coin objects.
     total_balance: u128,
     /// The number of coin objects or the actual coin objects.
@@ -39,7 +38,11 @@ pub enum CoinBalance {
 }
 
 impl Balance {
-    pub fn try_from_coins(coin_type: &str, coins: Vec<Coin>) -> Result<Self, BalanceError> {
+    /// Creates a new Balance from a coin type and a list of coins.
+    pub fn try_from_coins(
+        coin_type: &str,
+        coins: Vec<Coin>,
+    ) -> Result<Self, BalanceRetrievalError> {
         let coin_type: StructTag = coin_type.parse().context("invalid coin type")?;
         let total_balance = coins
             .iter()
@@ -54,11 +57,11 @@ impl Balance {
             })
             .sum();
         Ok(Self {
-            coin_type,
             total_balance,
             coin_balance: CoinBalance::Coins(coins),
         })
     }
+
     /// Returns the number of coin objects.
     pub fn coin_object_count(&self) -> usize {
         match self.coin_balance {
@@ -67,21 +70,26 @@ impl Balance {
         }
     }
 
-    pub(crate) fn total_balance(&self) -> u128 {
+    /// Returns the total balance.
+    pub fn total_balance(&self) -> u128 {
         self.total_balance
+    }
+
+    /// Take the coins if they are available.
+    pub fn coins(self) -> Option<Vec<Coin>> {
+        match self.coin_balance {
+            CoinBalance::Count(_) => None,
+            CoinBalance::Coins(coins) => Some(coins),
+        }
     }
 }
 
 impl TryFrom<sui_sdk::rpc_types::Balance> for Balance {
-    type Error = BalanceError;
+    type Error = BalanceRetrievalError;
 
-    fn try_from(balance: sui_sdk::rpc_types::Balance) -> Result<Self, BalanceError> {
+    fn try_from(balance: sui_sdk::rpc_types::Balance) -> Result<Self, BalanceRetrievalError> {
         Ok(Self {
-            coin_type: balance
-                .coin_type
-                .parse::<StructTag>()
-                .context("invalid coin type")?,
-            coin_balance: CoinBalance::Count(balance.coin_object_count as usize),
+            coin_balance: CoinBalance::Count(balance.coin_object_count),
             total_balance: balance.total_balance,
         })
     }

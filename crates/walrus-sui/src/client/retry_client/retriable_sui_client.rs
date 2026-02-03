@@ -657,11 +657,8 @@ impl RetriableSuiClient {
         coin_type: Option<String>,
     ) -> SuiClientResult<Balance> {
         if self.grpc_migration_level >= GRPC_MIGRATION_LEVEL_GET_BALANCE {
-            self.get_balance_with_grpc(
-                owner,
-                coin_type.as_deref().unwrap_or_else(|| "0x2::sui::SUI"),
-            )
-            .await
+            self.get_balance_with_grpc(owner, coin_type.as_deref().unwrap_or("0x2::sui::SUI"))
+                .await
         } else {
             self.get_balance_with_json_rpc(owner, coin_type).await
         }
@@ -689,7 +686,7 @@ impl RetriableSuiClient {
         self.failover_sui_client
             .with_failover(
                 async |client, method| {
-                    Ok(retry_rpc_errors(
+                    retry_rpc_errors(
                         self.get_strategy(),
                         || async {
                             client
@@ -697,12 +694,13 @@ impl RetriableSuiClient {
                                 .coin_read_api()
                                 .get_balance(owner, coin_type.clone())
                                 .await
+                                .map_err(|error| error.into())
                                 .and_then(|balance| Ok(Balance::try_from(balance)?))
                         },
                         self.metrics.clone(),
                         method,
                     )
-                    .await?)
+                    .await
                 },
                 None,
                 "get_balance",

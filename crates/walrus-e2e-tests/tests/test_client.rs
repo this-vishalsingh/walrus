@@ -2528,7 +2528,7 @@ pub async fn test_select_coins_max_objects() -> TestResult {
     )?;
 
     let balance = retry_client.get_balance(address, None).await?;
-    assert_eq!(balance.total_balance, u128::from(sui(4)));
+    assert_eq!(balance.total_balance(), u128::from(sui(4)));
 
     // The maximum number of coins that can be selected to reach the amount.
     let max_num_coins = 2;
@@ -2799,7 +2799,7 @@ async fn test_store_with_upload_relay_with_tip() {
         .get_balance(relay_address, None)
         .await
         .expect("get balance")
-        .total_balance;
+        .total_balance();
 
     const BLOB_SIZE: usize = 40000;
     match basic_store_and_read(
@@ -2822,7 +2822,7 @@ async fn test_store_with_upload_relay_with_tip() {
         .get_balance(relay_address, None)
         .await
         .expect("get balance")
-        .total_balance;
+        .total_balance();
 
     tracing::info!(
         "Relay address balance - Initial: {initial_relay_balance}, Final: {final_relay_balance}",

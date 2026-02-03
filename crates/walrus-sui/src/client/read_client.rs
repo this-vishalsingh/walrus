@@ -680,10 +680,9 @@ impl SuiReadClient {
                 None
             }
         };
-        Ok(self
-            .sui_client
+        self.sui_client
             .get_balance(owner_address, coin_type_option)
-            .await?)
+            .await
     }
 
     /// Returns a vector of coins of provided `coin_type` whose total balance is at least `balance`.

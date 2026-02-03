@@ -86,7 +86,11 @@ async fn test_register_certify_blob_100_percent_buyer_credits() -> anyhow::Resul
 
     let size = 10_000;
     // Send all WAL coins from admin wallet to a random wallet to ensure that we have a zero coin
-    let admin_balance = walrus_client.as_ref().balance(CoinType::Wal).await?;
+    let admin_balance = walrus_client
+        .as_ref()
+        .balance(CoinType::Wal)
+        .await?
+        .total_balance();
     if admin_balance > 0 {
         let random_address = SuiAddress::random_for_testing_only();
 
@@ -97,7 +101,11 @@ async fn test_register_certify_blob_100_percent_buyer_credits() -> anyhow::Resul
             .await?;
 
         // Verify admin wallet now has zero balance
-        let new_admin_balance = walrus_client.as_ref().balance(CoinType::Wal).await?;
+        let new_admin_balance = walrus_client
+            .as_ref()
+            .balance(CoinType::Wal)
+            .await?
+            .total_balance();
         assert_eq!(new_admin_balance, 0);
     }
 
@@ -481,7 +489,11 @@ async fn test_exchange_sui_for_wal() -> anyhow::Result<()> {
         .exchange_sui_for_wal(exchange_id, exchange_val)
         .await?;
 
-    let post_balance = walrus_client.as_ref().balance(CoinType::Wal).await?;
+    let post_balance = walrus_client
+        .as_ref()
+        .balance(CoinType::Wal)
+        .await?
+        .total_balance();
     assert_eq!(post_balance, pre_balance + exchange_val);
 
     Ok(())
@@ -583,11 +595,15 @@ async fn test_automatic_wal_coin_squashing(
             Some(client_2.as_ref().read_client().wal_coin_type().to_owned()),
         )
         .await?
-        .coin_object_count;
+        .coin_object_count();
 
     // Check that we have the correct balance.
     assert_eq!(
-        client_2.as_ref().balance(CoinType::Wal).await?,
+        client_2
+            .as_ref()
+            .balance(CoinType::Wal)
+            .await?
+            .total_balance(),
         n_source_coins * source_amount
     );
 
@@ -615,11 +631,22 @@ async fn test_automatic_wal_coin_squashing(
         .await?;
 
     // Check that the second wallet has no WAL coins left.
-    assert_eq!(client_2.as_ref().balance(CoinType::Wal).await?, 0);
+    assert_eq!(
+        client_2
+            .as_ref()
+            .balance(CoinType::Wal)
+            .await?
+            .total_balance(),
+        0
+    );
 
     // Check that the first wallet has the correct balance.
     assert_eq!(
-        client_1.as_ref().balance(CoinType::Wal).await?,
+        client_1
+            .as_ref()
+            .balance(CoinType::Wal)
+            .await?
+            .total_balance(),
         original_balance
     );
 
@@ -633,7 +660,7 @@ async fn test_automatic_wal_coin_squashing(
                 Some(client_2.as_ref().read_client().wal_coin_type().to_owned()),
             )
             .await?
-            .coin_object_count,
+            .coin_object_count(),
         n_coins + usize::try_from(n_target_coins).unwrap()
     );
     Ok(())
